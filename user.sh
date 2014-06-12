@@ -23,13 +23,9 @@ if [ ! -d "$www" ]; then
 	mkdir -p $www/logs
 	mkdir -p $www/backup
 
-	chmod -R 777 $www
+	chmod -R 755 $www
 	chown -R root $www
 	chown -R root $www/backup
 	chown -R $1 $www/htdocs
-	chmod -R 777 $www/htdocs
-
-	#chown -R root:$login $www/backup
-	#chown -R $login:$login $www/htdocs
-	#chown -R root:$login $www/logs
+	chmod -R 755 $www/htdocs
 fi

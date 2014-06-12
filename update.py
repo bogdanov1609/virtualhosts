@@ -8,16 +8,23 @@ import shlex
 import os
 import time
 
+def Log(name, message):
+	if message!="":
+		print "[%s]%s" % (name, message)
+
 def RunScript(script):
         args = shlex.split(script)
         process = subprocess.Popen(args, stdout=subprocess.PIPE)
         output = process.communicate()[0].strip()
         return output
 
-def RunAndPrint(script):
-	out = RunScript(script)
-	if (out!=""):
-		print out
+def SQLCheck(name, sqlp):
+	#ToDo: write this in Python?
+	return RunScript("./sql.sh %s %s" % (name, sqlp))
+
+def UserCheck(name, ftpp, root):
+	#ToDo: same
+	return RunScript("./user.sh %s %s %s" % (name, ftpp, root))
 
 def FTPCheck(cur, username, password, root):
 	encPass = crypt.crypt(password, "22")
@@ -68,35 +75,14 @@ if __name__ == "__main__":
 	print "Vhosts: %s" % (count[0])
 
         cur.execute("SELECT username, hostname, alias, SQLpass, FTPpass, root FROM vhosts")
-	logs = []
-	apacheRR=False
         for row in cur.fetchall() :
 		name, hname, alias, sqlp, ftpp, root = row
 		if (root==""):
 			root = defaultroot + hname
-		#1. User
-		out = RunScript("./user.sh %s %s %s" % (name, ftpp, root))
-		if (out!=""):
-			logs.append({"name" : name, "stage" : "user", "out" : out})
-			apacheRR=True
-		#2. SQL
-                out = RunScript("./sql.sh %s %s" % (name, sqlp))
-                if (out!=""):
-                        logs.append({"name" : name, "stage" : "sql", "out" : out})
-		#3. FTP
-		out = FTPCheck(ftpcur, name, ftpp, root)
-                if (out!=""):
-                        logs.append({"name" : name, "stage" : "ftp", "out" : out})
-		#4. Apache
-                out = ApacheCheck(name, hname, root, alias, apachedir)
-                if (out!=""):
-                        logs.append({"name" : name, "stage" : "apache", "out" : out})
-			apacheRR=True
-	for entry in logs:
-		for line in entry["out"].split('\n'):
-			print "[User %s , %s stage] : %s" % (entry["name"], entry["stage"], line)
-	if apacheRR:
-		print "Done; restarting apache"
-		print RunScript("./apacherr.sh")
-	else:
-		print "Done."
+		Log(name, "Checking %s (root %s)" % (hname, root))
+		Log(name, UserCheck(name, ftpp, root))
+		Log(name, SQLCheck(name, sqlp))
+		Log(name, FTPCheck(ftpcur, name, ftpp, root))
+                Log(name, ApacheCheck(name, hname, root, alias, apachedir))
+	print "Done; restarting apache"
+	print RunScript("service apache2 restart")
