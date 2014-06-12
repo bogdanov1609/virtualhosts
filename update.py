@@ -24,7 +24,7 @@ def FTPCheck(cur, username, password, root):
 	cur.execute("SELECT COUNT(*) FROM ftpuser WHERE userid='%s'" % (username))
 	count = cur.fetchone()
 	if (count[0]!=1):
-		cur.execute("INSERT INTO  `ftpd`.`ftpuser` (`userid`,`passwd`,`homedir`) VALUES ('%s', '%s', '%s');" % (username, encPass, root))
+		cur.execute("INSERT INTO  `ftpd`.`ftpuser` (`userid`,`passwd`,`homedir`) VALUES ('%s', '%s', '%s/htdocs');" % (username, encPass, root))
 		return "FTP user %s created" % username
 	else:
 		return ""
@@ -35,7 +35,7 @@ def ApacheCheck(username, hostname, root, alias, apache):
 	cfg = open("template.conf", 'r').read()
 	if (not os.path.isfile(filename)):
 		if (alias!=""):
-			alias = "Alias /%s %s/htdocs" % (alias, root)
+			alias = "ServerAlias %s" % (alias)
 		cfg = cfg.replace("%USERNAME%", username).replace("%HOSTNAME%", hostname)
 		cfg = cfg.replace("%ROOT%", root).replace("%ALIAS%", alias)
 		file = open(filename, 'w')
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         for row in cur.fetchall() :
 		name, hname, alias, sqlp, ftpp, root = row
 		if (root==""):
-			root = defaultroot + name
+			root = defaultroot + hname
 		#1. User
 		out = RunScript("./user.sh %s %s %s" % (name, ftpp, root))
 		if (out!=""):
