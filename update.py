@@ -7,6 +7,12 @@ import shlex
 import time
 import pwd
 import grp
+import string
+import random
+
+
+def genpass(length):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits + string.ascii_lowercase) for _ in range(length))
 
 
 def log(event, message):
@@ -104,6 +110,14 @@ def hostscheck(con, acc):
 
 
 def checkaccount(con, acc):
+    if acc["FTPpass"] == "":
+        acc["FTPpass"] = genpass(8)
+        con["vhosts"].execute("UPDATE vhosts SET FTPpass='%s' WHERE id=%s" % (acc["FTPpass"], acc["id"]))
+        log(acc["name"], "Resetting %s's ftp password" % acc["name"])
+    if acc["SQLpass"] == "":
+        acc["SQLpass"] = genpass(8)
+        con["vhosts"].execute("UPDATE vhosts SET SQLpass='%s' WHERE id=%s" % (acc["SQLpass"], acc["id"]))
+        log(acc["name"], "Resetting %s's sql password" % acc["name"])
     if acc["root"] == "":
         acc["root"] = con["root"] + acc["hostname"]
         con["vhosts"].execute("UPDATE vhosts SET root='%s' WHERE id=%s" % (acc["root"], acc["id"]))
