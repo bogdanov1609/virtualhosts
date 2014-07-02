@@ -115,7 +115,6 @@ if __name__ == "__main__":
 		name, hname, alias, sqlp, ftpp, root = row
 		if (root==""):
 			root = defaultroot + hname
-		Log(name, "Checking %s (root %s)" % (hname, root))
 		Log(name, UserCheck(name, ftpp, root))
 		Log(name, SQLCheck(cur, name, sqlp))
 		Log(name, FTPCheck(ftpcur, name, ftpp, root))
