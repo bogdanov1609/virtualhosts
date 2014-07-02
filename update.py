@@ -19,13 +19,6 @@ def RunScript(script):
         output = process.communicate()[0].strip()
         return output
 
-def chmodr(path, mode):
-	for root, dirs, files in os.walk(path, topdown=False):
-		for dir in dirs:
-			os.chmod(path + "/" + dir, mode)
-		for file in files:
-			os.chmod(path + "/" + file, mode)
-
 def SQLCheck(con, name, sqlp):
 	cur.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '%s'" % (name))
 	rows = cur.fetchone()
@@ -50,7 +43,6 @@ def UserCheck(name, ftpp, root):
 		os.makedirs(root+"/htdocs")
 		os.makedirs(root+"/logs")
 		os.makedirs(root+"/backup")
-		chmodr(root, 755)
 		uid = pwd.getpwnam(name).pw_uid
 		gid = grp.getgrnam(name).gr_gid
 		rootuid = pwd.getpwnam("root").pw_uid
@@ -58,6 +50,9 @@ def UserCheck(name, ftpp, root):
 		os.chown(root+"/htdocs", uid, gid)
 		os.chown(root+"/logs", rootuid, rootgid)
 		os.chown(root+"/backup", rootuid, rootgid)
+		os.chmod(root+"/logs", 0775)
+		os.chmod(root+"/backup", 0775)
+		os.chmod(root+"/htdocs", 0775)
 		out += "Creating folders for %s" % (name)
 	return out
 
