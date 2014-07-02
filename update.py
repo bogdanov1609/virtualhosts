@@ -5,8 +5,9 @@ import ConfigParser
 import crypt
 import subprocess
 import shlex
-import os
 import time
+import pwd
+import grp
 
 def Log(name, message):
 	if message!="":
@@ -18,13 +19,47 @@ def RunScript(script):
         output = process.communicate()[0].strip()
         return output
 
-def SQLCheck(name, sqlp):
-	#ToDo: write this in Python?
-	return RunScript("./sql.sh %s %s" % (name, sqlp))
+def chmodr(path, mode):
+	for root, dirs, files in os.walk(path, topdown=False):
+		for dir in dirs:
+			os.chmod(path + "/" + dir, mode)
+		for file in files:
+			os.chmod(path + "/" + file, mode)
+
+def SQLCheck(con, name, sqlp):
+	cur.execute("SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '%s'" % (name))
+	rows = cur.fetchone()
+	if (rows[0]!=1):
+       		cur.execute("CREATE DATABASE %s" % (name))
+		cur.execute("GRANT ALL PRIVILEGES ON %s.* TO '%s'@'localhost' IDENTIFIED BY '%s'" % (name, name, sqlp))
+		cur.execute("FLUSH PRIVILEGES")
+		return "SQL DB %s created" % name
+	return ""
 
 def UserCheck(name, ftpp, root):
-	#ToDo: same
-	return RunScript("./user.sh %s %s %s" % (name, ftpp, root))
+	out = ""
+
+	try:
+		pwd.getpwnam(name)
+	except KeyError:
+		RunScript("groupadd %s" % (name))
+		RunScript("useradd -g %s -p %s %s" % (name, ftpp, name))
+    		out += "Creating user for %s" % (name)
+
+	if not os.path.isdir(root):
+		os.makedirs(root+"/htdocs")
+		os.makedirs(root+"/logs")
+		os.makedirs(root+"/backup")
+		chmodr(root, 755)
+		uid = pwd.getpwnam(name).pw_uid
+		gid = grp.getgrnam(name).gr_gid
+		rootuid = pwd.getpwnam("root").pw_uid
+		rootgid = grp.getgrnam("nogroup").gr_gid
+		os.chown(root+"/htdocs", uid, gid)
+		os.chown(root+"/logs", rootuid, rootgid)
+		os.chown(root+"/backup", rootuid, rootgid)
+		out += "Creating folders for %s" % (name)
+	return out
 
 def FTPCheck(cur, username, password, root):
 	encPass = crypt.crypt(password, "22")
@@ -75,13 +110,14 @@ if __name__ == "__main__":
 	print "Vhosts: %s" % (count[0])
 
         cur.execute("SELECT username, hostname, alias, SQLpass, FTPpass, root FROM vhosts")
-        for row in cur.fetchall() :
+	rows = cur.fetchall()
+        for row in rows :
 		name, hname, alias, sqlp, ftpp, root = row
 		if (root==""):
 			root = defaultroot + hname
 		Log(name, "Checking %s (root %s)" % (hname, root))
 		Log(name, UserCheck(name, ftpp, root))
-		Log(name, SQLCheck(name, sqlp))
+		Log(name, SQLCheck(cur, name, sqlp))
 		Log(name, FTPCheck(ftpcur, name, ftpp, root))
                 Log(name, ApacheCheck(name, hname, root, alias, apachedir))
 	print "Done; restarting apache"
