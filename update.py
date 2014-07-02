@@ -86,6 +86,23 @@ def apachecheck(username, hostname, root, alias, apache):
         return ""
 
 
+def hostscheck(username):
+    sqlname = username+".mysqlserver"
+    with open("/etc/hosts") as hosts:
+        exists = False
+        for line in hosts:
+            split = line.strip().split()
+            if len(split) == 2:
+                if split[1] == sqlname:
+                    exists = True
+    if exists:
+        return ""
+    f = open("/etc/hosts", 'a')
+    f.write("\n127.0.0.1 	%s" % sqlname)
+    f.close()
+    return "Created sqlserver alias %s" % sqlname
+
+
 if __name__ == "__main__":
     print "Script started at " + time.ctime()
     cfg = ConfigParser.ConfigParser()
@@ -120,6 +137,7 @@ if __name__ == "__main__":
         log(name, sqlcheck(cur, name, sqlp))
         log(name, ftpcheck(ftpcur, name, ftpp, root))
         log(name, apachecheck(name, hname, root, alias, apachedir))
+        log(name, hostscheck(name))
     db.commit()
     print "Done; restarting apache"
     print runscript("service apache2 restart")
