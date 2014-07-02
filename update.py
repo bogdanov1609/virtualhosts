@@ -104,15 +104,18 @@ if __name__ == "__main__":
 	count = cur.fetchone()
 	print "Vhosts: %s" % (count[0])
 
-        cur.execute("SELECT username, hostname, alias, SQLpass, FTPpass, root FROM vhosts")
+        cur.execute("SELECT id, username, hostname, alias, SQLpass, FTPpass, root FROM vhosts")
 	rows = cur.fetchall()
         for row in rows :
-		name, hname, alias, sqlp, ftpp, root = row
+		id, name, hname, alias, sqlp, ftpp, root = row
 		if (root==""):
 			root = defaultroot + hname
+			cur.execute("UPDATE vhosts SET root='%s' WHERE id=%s" % (root, id))
+			Log(name, "Setting %s's root to %s" % (name, root))
 		Log(name, UserCheck(name, ftpp, root))
 		Log(name, SQLCheck(cur, name, sqlp))
 		Log(name, FTPCheck(ftpcur, name, ftpp, root))
                 Log(name, ApacheCheck(name, hname, root, alias, apachedir))
+	db.commit()
 	print "Done; restarting apache"
 	print RunScript("service apache2 restart")
