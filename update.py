@@ -67,7 +67,7 @@ def usercheck(con, acc):
 
 
 def ftpcheck(con, acc):
-    encPass = crypt.crypt(acc["FTPpass"], "22")
+    encPass = crypt.crypt(acc["FTPpass"], genpass(2))
     con["ftp"].execute("SELECT COUNT(*) FROM ftpuser WHERE userid='%s'" % acc["name"])
     count = con["ftp"].fetchone()
     if count[0] != 1:
