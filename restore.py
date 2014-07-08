@@ -11,6 +11,7 @@ import gzip
 import codecs
 import chardet
 import errno
+import argparse
 
 
 def mkdir_p(path):
@@ -51,10 +52,15 @@ if __name__ == "__main__":
             user=cfg.get("main", "user"),
             passwd=cfg.get("main", "passwd"),
             db=cfg.get("main", "db"))
-    if len(sys.argv)!=2:
-        print("Usage: python restore.py <backup folder>")
-        sys.exit(1)
-    backupdir = sys.argv[1]
+    parser = argparse.ArgumentParser(description='Restores from backup')
+    parser.add_argument("-nosql", action="store_true", required=False)
+    parser.add_argument("-nofiles", action="store_true", required=False)
+    parser.add_argument("-only", default="", required=False)
+    parser.add_argument("folder")
+    (args) = parser.parse_args()
+
+    backupdir = args.folder
+    users = args.only.split(",")
     cur = db.cursor()
     print("Restoring backups from %s" % backupdir)
 
@@ -62,37 +68,39 @@ if __name__ == "__main__":
     rows = cur.fetchall()
     for row in rows:
         name, hostnames, sqlp, root = row
+        if (users) and (name not in users):
+            continue
         if (root==""):
             print("No root for user %s" % (name))
             continue
-        #Files
         backup = Find(backupdir+name, "files.%s.*.tar.gz" % (name))
-        if backup=="":
-            #Let's check other backup name variation
-            if (os.path.isfile(backupdir+hostnames+".tar.gz")):
-                backup = backupdir+hostnames+".tar.gz"
-            short = hostnames.strip().split()[0].split(".")[0]
-            if (os.path.isfile(backupdir+short+".tar.gz")):
-                backup = backupdir+short+".tar.gz"
-        if (backup!=""):
-            print("Restoring files from %s" % backup)
-            tar = tarfile.open(backup, encoding="utf-8")
-            for x in tar.getmembers():
-                y = x.name
-                mkdir_p(root + "/" + os.path.dirname(y))
-                content = tar.extractfile(x)
-                if content != None:
-                    file = open(root + "/" + y, "w")
-                    file.write(content.read())
-                    file.close()
-            tar.close()
-        else:
-            print "! No backup found for %s" % name
-        #SQL
-        backup = Find(backupdir+name, "db.%s.*.sql.gz" % (name))
-        if (backup!=""):
-            print("Restoring db from %s" % backup)
-            f = gzip.open(backup, 'rb')
-            file_content = f.read()
-            f.close()
-            RunScript("mysql -u %s -p%s %s" % (cfg.get("main", "user"), cfg.get("main", "passwd"), name), file_content)
+        if not args.nofiles:
+            if backup=="":
+                if (os.path.isfile(backupdir+hostnames+".tar.gz")):
+                    backup = backupdir+hostnames+".tar.gz"
+                short = hostnames.strip().split()[0].split(".")[0]
+                if (os.path.isfile(backupdir+short+".tar.gz")):
+                    backup = backupdir+short+".tar.gz"
+            if (backup!=""):
+                print("Restoring files from %s" % backup)
+                tar = tarfile.open(backup, encoding="utf-8")
+                for x in tar.getmembers():
+                    mkdir_p(root + "/" + os.path.dirname(x.name))
+                    content = tar.extractfile(x)
+                    if content != None:
+                        file = open(root + "/" + x.name, "w")
+                        file.write(content.read())
+                        file.close()
+                tar.close()
+            else:
+                print "No file backup found for %s" % name
+        if not args.nosql:
+            backup = Find(backupdir+name, "db.%s.*.sql.gz" % (name))
+            if (backup!=""):
+                print("Restoring db from %s" % backup)
+                f = gzip.open(backup, 'rb')
+                file_content = f.read()
+                f.close()
+                RunScript("mysql -u %s -p%s %s" % (cfg.get("main", "user"), cfg.get("main", "passwd"), name), file_content)
+            else:
+                print "No SQL backup found for %s" % name
