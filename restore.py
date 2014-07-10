@@ -58,19 +58,26 @@ if __name__ == "__main__":
     cur = db.cursor()
     print("Restoring backups from %s" % backupdir)
 
-    cur.execute("SELECT name, SQLpass, root FROM vhosts")
+    cur.execute("SELECT name, hostnames, SQLpass, root FROM vhosts")
     rows = cur.fetchall()
     for row in rows:
-        name, sqlp, root = row
+        name, hostnames, sqlp, root = row
         if (root==""):
             print("No root for user %s" % (name))
             continue
+        #Files
         backup = Find(backupdir+name, "files.%s.*.tar.gz" % (name))
+        if backup=="":
+            #Let's check other backup name variation
+            if (os.path.isfile(backupdir+hostnames+".tar.gz")):
+                backup = backupdir+hostnames+".tar.gz"
+            short = hostnames.strip().split()[0].split(".")[0]
+            if (os.path.isfile(backupdir+short+".tar.gz")):
+                backup = backupdir+short+".tar.gz"
         if (backup!=""):
             print("Restoring files from %s" % backup)
             tar = tarfile.open(backup, encoding="utf-8")
             for x in tar.getmembers():
-                print root + "/" + x.name
                 y = x.name
                 mkdir_p(root + "/" + os.path.dirname(y))
                 content = tar.extractfile(x)
@@ -79,6 +86,9 @@ if __name__ == "__main__":
                     file.write(content.read())
                     file.close()
             tar.close()
+        else:
+            print "! No backup found for %s" % name
+        #SQL
         backup = Find(backupdir+name, "db.%s.*.sql.gz" % (name))
         if (backup!=""):
             print("Restoring db from %s" % backup)
