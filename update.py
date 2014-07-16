@@ -161,10 +161,10 @@ def hello(con):
 
 
 def getaccounts(con):
-    con["vhosts"].execute("SELECT id, name, hostnames, custom, SQLpass, FTPpass, root, FTPenabled, SQLenabled, ApacheEnabled FROM vhosts WHERE enabled=1")
+    con.execute("SELECT id, name, hostnames, custom, SQLpass, FTPpass, root, FTPenabled, SQLenabled, ApacheEnabled FROM vhosts WHERE enabled=1")
     accs = []
-    columns = tuple( [d[0] for d in con["vhosts"].description] )
-    for row in con["vhosts"]:
+    columns = tuple( [d[0] for d in con.description] )
+    for row in con:
         #User can have multuple host names; let's get the first one
         acc = dict(zip(columns, row))
         acc["hostname"] = acc["hostnames"].split()[0]
@@ -175,13 +175,13 @@ def getaccounts(con):
 def finish(con):
     con["db"].commit()
     print "Done; restarting apache"
-    runscript("service apache2 restart")
+    runscript("service apache2 reload")
 
 
 if __name__ == "__main__":
     con = readconfig("config.cfg")
     hello(con)
-    accs = getaccounts(con)
+    accs = getaccounts(con["vhosts"])
     for acc in accs:
         checkaccount(con, acc)
     finish(con)
