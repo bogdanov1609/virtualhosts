@@ -7,15 +7,15 @@ import argparse
 from common import run_script, mysql_connect, get_config, get_hosts, mkdir_recursive
 
 
-def add_backup_record(con, user, filename, uploaded, folder):
-    query = "INSERT INTO `vhosts`.`backups` (`host`, `filename`, `localpath`, `uploaded`)" \
-            "VALUES (%s, %s, %s, %s);" % (user['id'], filename, folder+filename, uploaded)
+def add_backup_record(con, user, filename, uploaded, folder, type):
+    query = "INSERT INTO `vhosts`.`backups` (`host`, `filename`, `localpath`, `uploaded`, `remotepath`, `type`)" \
+            "VALUES ('%s', '%s', '%s', '%s', NULL, '%s');" % (user['id'], filename, folder+filename, int(uploaded), type)
     con.execute(query)
-    con.commit()
+
 
 def mysql_dump(auth_data, user, folder):
     now_date = str(datetime.date.today())
-    dump = run_script("mysqldump -u %s -p%s -h %s 2> /dev/null &" %
+    dump = run_script("mysqldump -u %s -p%s -h %s" %
         (auth_data['mysql_username'],
         auth_data['mysql_password'],
         auth_data['mysql_host']), "")
@@ -35,22 +35,32 @@ def files_dump(auth_data, user, folder):
     return filename
 
 
-def upload_to_ftp(auth_data, paths):
-    return
-    now_date = str(datetime.date.today())
-    backup_dir = auth_data['backup_dir'] + now_date + '/'
-
+def upload_to_ftp(auth_data, con, db):
     session = ftplib.FTP(auth_data['ftp_host'], auth_data['ftp_username'], auth_data['ftp_password'])
-    try:
-        session.mkd("faculty/" + now_date)
-    except:
-        pass
-    session.cwd("faculty/" + now_date)
-
-    for path in paths:
-        content = open(backup_dir + path, 'rb')
-        session.storbinary('STOR ' + path, content)
-        content.close()
+    query = "SELECT id, name, filename, localpath, date FROM uploaded_backups WHERE remotepath IS NULL"
+    con.execute(query)
+    backups = con.fetchall()
+    for back in backups:
+        id, name, filename, localpath, date = back
+        remotedir = "/faculty/" + date.isoformat()
+        try:
+            session.mkd(remotedir)
+        except:
+            pass
+        session.cwd(remotedir)
+        try:
+            content = open(localpath, 'rb')
+            try:
+                session.storbinary('STOR ' + filename, content)
+            except:
+                pass
+            content.close()
+        except:
+            pass
+        query="UPDATE backups SET remotepath='%s' WHERE id='%s'" % (remotedir, id)
+        con.execute(query)
+        print "Uploaded %s " % filename
+        db.commit()
     session.quit()
 
 
@@ -58,7 +68,6 @@ def main(files, sql, onlyusers, upload):
     auth_data = get_config()
     db, con = mysql_connect(auth_data)
     accs = get_hosts(con)
-    backups = []
     for acc in accs:
         if onlyusers and (acc['name'] not in onlyusers):
             print "Ignoring %s" % acc['name']
@@ -71,15 +80,15 @@ def main(files, sql, onlyusers, upload):
         if files:
             print "Making %s's files backup" % acc['name']
             filename = files_dump(auth_data, acc, folder)
-            add_backup_record(con, acc, filename, upload, folder)
+            add_backup_record(con, acc, filename, upload, folder, "files")
         if sql:
             print "Making %s's DB backup" % acc['name']
             filename = mysql_dump(auth_data, acc, folder)
-            add_backup_record(con, acc, filename, upload, folder)
+            add_backup_record(con, acc, filename, upload, folder, "sql")
+    db.commit()
     if upload:
         print "uploading"
-        upload_to_ftp(auth_data, backups)
-    db.commit()
+        upload_to_ftp(auth_data, con, db)
     db.close()
 
 
