@@ -1,69 +1,42 @@
-import ConfigParser
-import MySQLdb
 import os
 import datetime
 import tarfile
 import ftplib
-import sys
 import gzip
 import argparse
-from update import getaccounts
-from restore import RunScript
-
-def mysql_connect(auth_data):
-    try:
-        db = MySQLdb.connect(host=auth_data['mysql_host'], user=auth_data['mysql_username'], passwd=auth_data['mysql_password'], db=auth_data['mysql_db'])
-        cursor = db.cursor()
-    except MySQLdb.Error:
-        print db.error()
-    return cursor
+from common import run_script, mysql_connect, get_config, get_hosts, mkdir_recursive
 
 
-def get_auth_data():
-    config = ConfigParser.ConfigParser()
-    config.read('config.cfg')
-    auth_data = {}
-    auth_data['mysql_username'] = config.get('main', 'user')
-    auth_data['mysql_password'] = config.get('main', 'passwd')
-    auth_data['mysql_db'] = config.get('main', 'db')
-    auth_data['mysql_host'] = config.get('main', 'host')
-    auth_data['ftp_username'] = config.get('main', 'backuser')
-    auth_data['ftp_password'] = config.get('main', 'backpass')
-    auth_data['ftp_host'] = config.get('main', 'backhost')
-    auth_data['backup_dir'] = config.get('main', 'directory')
-    return auth_data
+def add_backup_record(con, user, filename, uploaded, folder):
+    query = "INSERT INTO `vhosts`.`backups` (`host`, `filename`, `localpath`, `uploaded`)" \
+            "VALUES (%s, %s, %s, %s);" % (user['id'], filename, folder+filename, uploaded)
+    con.execute(query)
+    con.commit()
 
-
-def mysql_dump(auth_data, user):
+def mysql_dump(auth_data, user, folder):
     now_date = str(datetime.date.today())
-    mysql_backup_dir = auth_data['backup_dir'] + now_date + '/' 
-    if not os.path.exists(mysql_backup_dir):
-        os.makedirs(mysql_backup_dir)
-    dump = RunScript("mysqldump -u %s -p%s -h %s 2> /dev/null &" % 
+    dump = run_script("mysqldump -u %s -p%s -h %s 2> /dev/null &" %
         (auth_data['mysql_username'],
         auth_data['mysql_password'],
         auth_data['mysql_host']), "")
-    filename = user['name'] + ".sql.gz"
-    f = gzip.open(mysql_backup_dir + filename, 'wb')
+    filename = user['name'] + "." + now_date + ".sql.gz"
+    f = gzip.open(folder + filename, 'wb')
     f.write(dump)
     f.close()
     return filename
 
 
-def files_dump(auth_data, user):
+def files_dump(auth_data, user, folder):
     now_date = str(datetime.date.today())
-    ftp_backup_dir = auth_data['backup_dir'] + now_date + '/'
-    if not os.path.exists(ftp_backup_dir):
-        os.makedirs(ftp_backup_dir)
-    filename = user['name'] + ".tar.gz"
-    tar = tarfile.open(ftp_backup_dir + filename, "w:gz")
+    filename = user['name'] + "." + now_date + ".tar.gz"
+    tar = tarfile.open(folder + filename, "w:gz")
     tar.add(user['root']+"/htdocs", arcname="htdocs")
     tar.close()
     return filename
 
 
 def upload_to_ftp(auth_data, paths):
-    #ToDo: clean this mess
+    return
     now_date = str(datetime.date.today())
     backup_dir = auth_data['backup_dir'] + now_date + '/'
 
@@ -82,23 +55,32 @@ def upload_to_ftp(auth_data, paths):
 
 
 def main(files, sql, onlyusers, upload):
-    auth_data = get_auth_data()
-    con = mysql_connect(auth_data)
-    users = getaccounts(con)
+    auth_data = get_config()
+    db, con = mysql_connect(auth_data)
+    accs = get_hosts(con)
     backups = []
-    for user in users:
-        if (onlyusers) and (user['name'] not in onlyusers):
-            print "Ignoring %s" % user['name']
+    for acc in accs:
+        if onlyusers and (acc['name'] not in onlyusers):
+            print "Ignoring %s" % acc['name']
             continue
+        if upload:
+            folder = auth_data['backup_dir'] + str(datetime.date.today()) + '/'
+        else:
+            folder = acc['root']+"/backup/"
+        mkdir_recursive(folder)
         if files:
-            print "Making %s's files backup" % user['name']
-            backups.append(files_dump(auth_data, user))
+            print "Making %s's files backup" % acc['name']
+            filename = files_dump(auth_data, acc, folder)
+            add_backup_record(con, acc, filename, upload, folder)
         if sql:
-            print "Making %s's DB backup" % user['name']
-            backups.append(mysql_dump(auth_data, user))
+            print "Making %s's DB backup" % acc['name']
+            filename = mysql_dump(auth_data, acc, folder)
+            add_backup_record(con, acc, filename, upload, folder)
     if upload:
         print "uploading"
         upload_to_ftp(auth_data, backups)
+    db.commit()
+    db.close()
 
 
 if __name__ == "__main__":
