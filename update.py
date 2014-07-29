@@ -181,7 +181,7 @@ def finish(con):
 if __name__ == "__main__":
     con = readconfig("config.cfg")
     hello(con)
-    accs = getaccounts(con["vhosts"])
-    for acc in accs:
+    acs = getaccounts(con["vhosts"])
+    for acc in acs:
         checkaccount(con, acc)
     finish(con)
