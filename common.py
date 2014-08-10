@@ -16,7 +16,7 @@ def mkdir_recursive(path):
 
 
 def get_hosts(con):
-    con.execute("SELECT id, name, hostnames, custom, SQLpass, FTPpass, root, FTPenabled, SQLenabled, ApacheEnabled"
+    con.execute("SELECT id, name, hostnames, custom, SQLpass, FTPpass, root, FTPenabled, SQLenabled, ApacheEnabled "
                 "FROM vhosts WHERE enabled=1")
     accs = []
     columns = tuple( [d[0] for d in con.description] )
