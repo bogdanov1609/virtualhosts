@@ -15,10 +15,11 @@ def add_backup_record(con, user, filename, uploaded, folder, type):
 
 def mysql_dump(auth_data, user, folder):
     now_date = str(datetime.date.today())
-    dump = run_script("mysqldump -u %s -p%s -h %s" %
+    dump = run_script("mysqldump -u %s -p%s -h %s %s" %
         (auth_data['mysql_username'],
         auth_data['mysql_password'],
-        auth_data['mysql_host']), "")
+        auth_data['mysql_host'],
+        user['name']), "")
     filename = user['name'] + "." + now_date + ".sql.gz"
     f = gzip.open(folder + filename, 'wb')
     f.write(dump)
@@ -42,7 +43,7 @@ def upload_to_ftp(auth_data, con, db):
     backups = con.fetchall()
     for back in backups:
         id, name, filename, localpath, date = back
-        remotedir = "/faculty/" + date.isoformat()
+        remotedir = "/faculty/" + date.strftime("%Y-%m-%d")
         try:
             session.mkd(remotedir)
         except:
@@ -57,7 +58,7 @@ def upload_to_ftp(auth_data, con, db):
             content.close()
         except:
             pass
-        query="UPDATE backups SET remotepath='%s' WHERE id='%s'" % (remotedir, id)
+        query="UPDATE backups SET remotepath='%s' WHERE id='%s'" % (remotedir + "\\" + filename, id)
         con.execute(query)
         print "Uploaded %s " % filename
         db.commit()
@@ -93,11 +94,11 @@ def main(files, sql, onlyusers, upload):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Restores from backup')
+    parser = argparse.ArgumentParser(description='Backups hosts')
     parser.add_argument("-nosql", action="store_true", required=False)
     parser.add_argument("-nofiles", action="store_true", required=False)
     parser.add_argument("-only", default="", required=False)
-    parser.add_argument("-upload", action="store_false")
+    parser.add_argument("-upload", action="store_true")
     (args) = parser.parse_args()
     if args.only!="":
         users = args.only.split(",")
