@@ -1,4 +1,6 @@
-import os
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import datetime
 import tarfile
 import ftplib

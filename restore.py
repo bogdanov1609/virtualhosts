@@ -1,15 +1,14 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import os
 import MySQLdb
-import sys
 import ConfigParser
 import subprocess
 import shlex
-import time
 import fnmatch
 import tarfile
 import gzip
-import codecs
-import chardet
 import errno
 import argparse
 

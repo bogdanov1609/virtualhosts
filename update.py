@@ -1,3 +1,6 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
 import os
 import MySQLdb
 import ConfigParser
@@ -38,7 +41,7 @@ def sqlcheck(con, acc):
     return ""
 
 
-def usercheck(con, acc):
+def usercheck(acc):
     out = ""
     username = acc["name"]
     userroot = acc["root"]
@@ -92,7 +95,7 @@ def apachecheck(con, acc):
         return ""
 
 
-def hostscheck(con, acc):
+def hostscheck(acc):
     sqlname = acc["name"]+".mysqlserver"
     with open("/etc/hosts") as hosts:
         exists = False
@@ -181,7 +184,7 @@ def finish(con):
 if __name__ == "__main__":
     con = readconfig("config.cfg")
     hello(con)
-    accs = getaccounts(con["vhosts"])
-    for acc in accs:
+    acs = getaccounts(con["vhosts"])
+    for acc in acs:
         checkaccount(con, acc)
     finish(con)
