@@ -60,7 +60,10 @@ if __name__ == "__main__":
     (args) = parser.parse_args()
 
     backupdir = args.folder
-    users = args.only.split(",")
+    if args.only == "":
+        users = []
+    else:
+        users = args.only.split(",")
     cur = db.cursor()
     print("Restoring backups from %s" % backupdir)
 
@@ -68,7 +71,8 @@ if __name__ == "__main__":
     rows = cur.fetchall()
     for row in rows:
         name, hostnames, sqlp, root = row
-        if (users) and (name not in users):
+        if (len(users)>0) and (name not in users):
+            print "Skipping %s" % name
             continue
         if (root==""):
             print("No root for user %s" % (name))
@@ -78,6 +82,8 @@ if __name__ == "__main__":
             if backup=="":
                 if (os.path.isfile(backupdir+hostnames+".tar.gz")):
                     backup = backupdir+hostnames+".tar.gz"
+                if (Find(backupdir, "files.%s.*.tar.gz" % (name)) != ""):
+                    backup = Find(backupdir, "files.%s.*.tar.gz" % (name))
                 short = hostnames.strip().split()[0].split(".")[0]
                 if (os.path.isfile(backupdir+short+".tar.gz")):
                     backup = backupdir+short+".tar.gz"
