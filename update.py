@@ -71,7 +71,7 @@ def ftpcheck(con, acc):
     con["ftp"].execute("SELECT COUNT(*) FROM ftpuser WHERE userid='%s'" % acc["name"])
     count = con["ftp"].fetchone()
     if count[0] != 1:
-        con["ftp"].execute("INSERT INTO  `ftpd`.`ftpuser` (`userid`,`passwd`,`homedir`) VALUES ('%s', '%s', '%s/htdocs');" % (acc["name"], encPass, acc["root"]))
+        con["ftp"].execute("INSERT INTO  `ftpd`.`ftpuser` (`userid`,`passwd`,`homedir`) VALUES ('%s', '%s', '%s');" % (acc["name"], encPass, acc["root"]))
         return "FTP user %s created" % acc["name"]
     else:
         return ""
