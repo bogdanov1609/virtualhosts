@@ -126,10 +126,10 @@ def checkaccount(con, acc):
         con["vhosts"].execute("UPDATE vhosts SET root='%s' WHERE id=%s" % (acc["root"], acc["id"]))
         log(acc["name"], "Setting %s's root to %s" % (acc["name"], acc["root"]))
 
-    log(acc["name"], usercheck(con, acc))
+    log(acc["name"], usercheck(acc))
     if (acc["SQLenabled"]!=0):
         log(acc["name"], sqlcheck(con, acc))
-        log(acc["name"], hostscheck(con, acc))
+        log(acc["name"], hostscheck(acc))
     if (acc["FTPenabled"]!=0):
         log(acc["name"], ftpcheck(con, acc))
     if (acc["ApacheEnabled"]!=0):
@@ -168,8 +168,8 @@ def getaccounts(con):
     accs = []
     columns = tuple( [d[0] for d in con.description] )
     for row in con:
-        #User can have multuple host names; let's get the first one
         acc = dict(zip(columns, row))
+        #User can have multuple host names; let's get the first one
         acc["hostname"] = acc["hostnames"].split()[0]
         accs.append(acc)
     return accs

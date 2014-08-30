@@ -40,6 +40,7 @@ def files_dump(auth_data, user, folder):
 
 def upload_to_ftp(auth_data, con, db):
     session = ftplib.FTP(auth_data['ftp_host'], auth_data['ftp_username'], auth_data['ftp_password'])
+    session.set_pasv(True)
     query = "SELECT id, name, filename, localpath, date FROM uploaded_backups WHERE remotepath IS NULL"
     con.execute(query)
     backups = con.fetchall()
