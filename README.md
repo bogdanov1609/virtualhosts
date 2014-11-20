@@ -47,15 +47,29 @@ backup.py [-nosql] [-nofiles] [-only users] [-upload]
 
 `-upload` upload backups to FTP
 
-#Usage
-##Updating
-Update information in MySQL database and run
+#Configuration files
+##config.cfg
+Main configuration file. Structure:
 ```
-python update.py
+[main]
+host=MySQL host
+user=MySQL user
+passwd=MySQL password
+db=<DB with account information table (named vhosts)
+ftpdb=<FTPd DB>
+root=<default site root>
+apachedir=<Apache site configuration files' directory>
+backhost=<FTP host>
+backuser=<FTP login>
+backpass=<FTP password>
+directory=<backup directory>
 ```
-##Making backups
-Run
-```
-python backup.py
-```
+##template.conf
+Apache site config template. One can use following expressions in config (they will be replaced with actual 
+user info):
 
+`%HOSTNAME%` - user hostname
+
+`%ROOT%` - user root
+
+`%CUSTOM%` - user 'custom' field
