@@ -1,6 +1,6 @@
 virtualhosts
 ============
-This is script for automated managing virtual hosts under Apache+MySQL+FTPd.
+These are scripts for automated managing virtual hosts under Apache+MySQL+FTPd.
 #General
 Account data is stored in MySQL database.
 
@@ -12,11 +12,16 @@ There is no built-in GUI for managing accounts. One should use PhpMyAdmin or con
 
 Currently, scripts are incapable to update passwords, delete or rename accounts,
 restore backups (script is broken), add entries to logrotate,
-and update some configuration files.
+update specific users, and update some configuration files.
 
 #Managing account information
 Make changes in DB using your favourite MySQL client, and then use
-`update.py` to apply changes. Specificially, it does (for each account, in that order):
+```
+python update.py
+```
+to apply changes. 
+
+Specificially, `update.py` does (for each account, in that order):
 
 <UL>
 <LI>Generate FTP and SQL passwords, if these fields are empty
