@@ -65,3 +65,10 @@ def get_config():
     auth_data['backup_dir'] = config.get('main', 'directory')
     return auth_data
 
+def chownR(path, group, user):
+  os.chown(path, group, user)
+  for root, dirs, files in os.walk(path):  
+    for momo in dirs:  
+      os.chown(os.path.join(root, momo), user, group)
+    for momo in files:
+      os.chown(os.path.join(root, momo), user, group)

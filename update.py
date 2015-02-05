@@ -12,7 +12,7 @@ import pwd
 import grp
 import string
 import random
-
+from common import chownR
 
 def genpass(length):
     return ''.join(random.choice(string.ascii_uppercase + string.digits + string.ascii_lowercase) for _ in range(length))
@@ -51,12 +51,12 @@ def usercheck(acc):
         runscript("groupadd %s" % username)
         runscript("useradd -g %s -p %s %s" % (username, acc["FTPpass"], username))
         out += "Creating user for %s" % username
+    uid = pwd.getpwnam(username).pw_uid
+    gid = grp.getgrnam(username).gr_gid
     if not os.path.isdir(userroot):
         os.makedirs(userroot+"/htdocs")
         os.makedirs(userroot+"/logs")
         os.makedirs(userroot+"/backup")
-        uid = pwd.getpwnam(username).pw_uid
-        gid = grp.getgrnam(username).gr_gid
         rootuid = pwd.getpwnam("root").pw_uid
         rootgid = grp.getgrnam("nogroup").gr_gid
         os.chown(userroot+"/htdocs", uid, gid)
@@ -66,6 +66,7 @@ def usercheck(acc):
         os.chmod(userroot+"/backup", 0775)
         os.chmod(userroot+"/htdocs", 0775)
         out += "Creating folders for %s" % username
+    	chownR(userroot+"/htdocs", uid, gid)
     return out
 
 
