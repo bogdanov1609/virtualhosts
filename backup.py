@@ -6,6 +6,7 @@ import tarfile
 import ftplib
 import gzip
 import argparse
+import os
 
 from common import run_script, mysql_connect, get_config, get_hosts, mkdir_recursive
 
@@ -96,6 +97,11 @@ def main(files, sql, onlyusers, upload):
         print "uploading"
         upload_to_ftp(auth_data, con, db)
     db.close()
+    if upload:
+        print "Remove old backup"
+        os.removedirs(folder)
+    else:
+        pass
 
 
 if __name__ == "__main__":
