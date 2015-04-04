@@ -31,7 +31,7 @@ def mysql_dump(auth_data, user, folder):
     return filename
 
 
-def files_dump(auth_data, user, folder):
+def files_dump(user, folder):
     now_date = str(datetime.date.today())
     filename = user['name'] + "." + now_date + ".tar.gz"
     tar = tarfile.open(folder + filename, "w:gz")
